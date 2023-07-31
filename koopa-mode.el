@@ -49,7 +49,9 @@
     ; Highlight miscellaneous keywords
     ("\\<\\(begin\\|process\\|end\\)\\>" . font-lock-keyword-face)
     ; Highlight PowerShell cmdlets
-    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face))
+    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face)
+    ; Highlight member accessors
+    ("\\<\\(\\$[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+\\)\\|\\(\\[[a-zA-Z0-9_]+\\]:\\{2\\}[a-zA-Z0-9_]+\\)\\>" . font-lock-function-name-face))
   "Keyword highlighting specification for `koopa-mode`.")
 
 ;; Add any keybindings or other customizations here as needed
