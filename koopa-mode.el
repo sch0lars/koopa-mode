@@ -1,8 +1,6 @@
 ;;; koopa-mode.el --- A major mode for Microsoft PowerShell
 
 ;;; Code:
-(require font-lock-multiline)
-
 ;; Define koopa-mode
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
   "A major mode for editing Microsoft PowerShell scripts."
@@ -29,13 +27,13 @@
     ;; Comment syntax: # starts a comment until the end of the line
     (modify-syntax-entry ?# "<" st)
     (modify-syntax-entry ?\n ">" st)
-   
+
     ;; String syntax: " denotes a string
     (modify-syntax-entry ?\" "\"" st)
 
     ;; String syntax: ' denotes a string
-    (modify-syntax-entry ?\' "'" st)
-    
+    (modify-syntax-entry ?\' "\"" st)
+
     ;; Variable syntax: $ denotes a variable
     (modify-syntax-entry ?$ "w" st)
 
@@ -57,7 +55,7 @@
     ; Highlight multi-line comments
     ; ("<#[^#]*[^>]*#>" font-lock-comment-face)
     ; Highlight variables that start with a $
-    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" 1 font-lock-variable-name-face t)
+    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" . font-lock-variable-name-face)
     ; Highlight objects from the DotNet framework
     ("\\[[a-zA-Z0-9_\\.]+\\]:\\{2\\}[a-zA-Z0-9_\\.]+" . font-lock-builtin-face)
     ; Highlight control flow keywords
