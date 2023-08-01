@@ -25,9 +25,12 @@
 (defconst koopa-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; Comment syntax: # starts a comment until the end of the line
-    (modify-syntax-entry ?# "<" st)
+    ;; and <# #> denotes a multi-line comment
+    (modify-syntax-entry ?\< "(> 1nb" st)
+    (modify-syntax-entry ?\# "_ 123b" st)
+    (modify-syntax-entry ?\> ")< 4nb" st)
     (modify-syntax-entry ?\n ">" st)
-
+        
     ;; String syntax: " denotes a string
     (modify-syntax-entry ?\" "\"" st)
 
@@ -45,17 +48,14 @@
     st)
   "Syntax table for `koopa-mode`.")
 
-; Ignore case with font-lock regular expressions
-; (setq-local font-lock-keywords-case-fold-search t)
 
 ;; Define the font-lock keywords
 (defconst koopa-mode-font-lock-keywords
   ; Highlight comments starting with #
   '(("\\(#.*\\)" 1 font-lock-comment-face)
-    ; Highlight multi-line comments
-    ; ("<#[^#]*[^>]*#>" font-lock-comment-face)
     ; Highlight variables that start with a $
-    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" . font-lock-variable-name-face)
+    ; ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" . font-lock-variable-name-face)
+    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" 0 font-lock-variable-name-face t)
     ; Highlight objects from the DotNet framework
     ("\\[[a-zA-Z0-9_\\.]+\\]:\\{2\\}[a-zA-Z0-9_\\.]+" . font-lock-builtin-face)
     ; Highlight control flow keywords
