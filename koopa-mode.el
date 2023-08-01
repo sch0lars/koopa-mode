@@ -1,6 +1,8 @@
 ;;; koopa-mode.el --- A major mode for Microsoft PowerShell
 
 ;;; Code:
+(require font-lock-multiline)
+
 ;; Define koopa-mode
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
   "A major mode for editing Microsoft PowerShell scripts."
@@ -22,7 +24,7 @@
   )
 
 ;; Define the syntax table
-(defvar koopa-mode-syntax-table
+(defconst koopa-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; Comment syntax: # starts a comment until the end of the line
     (modify-syntax-entry ?# "<" st)
@@ -31,6 +33,9 @@
     ;; String syntax: " denotes a string
     (modify-syntax-entry ?\" "\"" st)
 
+    ;; String syntax: ' denotes a string
+    (modify-syntax-entry ?\' "'" st)
+    
     ;; Variable syntax: $ denotes a variable
     (modify-syntax-entry ?$ "w" st)
 
@@ -46,13 +51,13 @@
 ; (setq-local font-lock-keywords-case-fold-search t)
 
 ;; Define the font-lock keywords
-(defvar koopa-mode-font-lock-keywords
+(defconst koopa-mode-font-lock-keywords
   ; Highlight comments starting with #
   '(("\\(#.*\\)" 1 font-lock-comment-face)
     ; Highlight multi-line comments
     ; ("<#[^#]*[^>]*#>" font-lock-comment-face)
     ; Highlight variables that start with a $
-    ("\\<\\$[a-zA-Z_][a-zA-Z0-9_]*\\>" . font-lock-variable-name-face)
+    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" 1 font-lock-variable-name-face t)
     ; Highlight objects from the DotNet framework
     ("\\[[a-zA-Z0-9_\\.]+\\]:\\{2\\}[a-zA-Z0-9_\\.]+" . font-lock-builtin-face)
     ; Highlight control flow keywords
