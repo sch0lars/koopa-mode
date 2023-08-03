@@ -18,7 +18,7 @@
 
   ;; Keybindings
   ;; Bind run-powershell to C-c C-p
-  (local-set-key (kbd "C-c C-p") 'run-powershell)
+  (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   )
 
 ;; Define the syntax table
@@ -75,18 +75,37 @@
 ;; For example, defining indentation rules, keybindings for common commands, etc.
 
 
+;; Create a variable for the PowerShell executable
+(defcustom koopa-powershell-executable "pwsh"
+  "The name of the system's PowerShell executable."
+  :type 'string
+  :group 'koopa-mode)
+
+(defvar koopa-powershell-cli-arguments '("-i")
+  "Arguments passed to the PowerShell executable.")
+
+
 ;; Define the PowerShell inferior shell buffer
-(defvar powershell-buffer-name "*PowerShell*")
+(defvar koopa-powershell-buffer-name "*PowerShell*"
+  "The name of the PowerShell buffer.")
 
-(defun run-powershell ()
-  "Run PowerShell in an inferior shell buffer."
+;; Create the PowerShell process
+(defun koopa-run-powershell ()
+  "Run an inferior instance of PowerShell in a new buffer."
   (interactive)
-  (let ((powershell-program "powershell.exe"))
-    (pop-to-buffer (get-buffer-create powershell-buffer-name))
-    (unless (comint-check-proc powershell-buffer-name)
-      (apply 'make-comint-in-buffer "PowerShell" powershell-buffer-name powershell-program nil '("-NoExit" "-Command" "-")))
-    (setq-local company-backends '(company-capf))))
-
+  (let* ((powershell-program koopa-powershell-executable)
+	 (buffer (get-buffer-create koopa-powershell-buffer-name))
+	 (proc-alive (comint-check-proc buffer))
+	 (process (get-buffer-process buffer)))
+    ; If the process is dead, reset the mode and restart the process
+    (unless proc-alive
+      (with-current-buffer buffer
+	(apply 'make-comint-in-buffer "PowerShell" buffer powershell-program nil koopa-powershell-cli-arguments)
+	(koopa-mode)))
+    ; If there is a valid buffer, pop to it
+    (when buffer
+      (pop-to-buffer buffer))))
+    
 ;; Set up PowerShell buffer for auto-completion in koopa-mode
 (add-hook 'koopa-mode-hook (lambda () (setq-local company-backends '(company-files company-capf))))
 
