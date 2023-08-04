@@ -11,15 +11,13 @@
   ; Make font-lock keywords case-insensitive
   (set (make-local-variable 'font-lock-defaults)
        '(koopa-mode-font-lock-keywords nil t))
-  ;; Enable company-mode for auto-completion
-  (company-mode 1)
   ;; Set company-backends for PowerShell buffer
   (setq-local company-backends '(company-files company-capf))
-
-  ;; Keybindings
+  ;;; Keybindings
   ;; Bind run-powershell to C-c C-p
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
-  )
+  (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
+  (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell))
 
 ;; Define the syntax table
 (defconst koopa-mode-syntax-table
@@ -67,27 +65,28 @@
     ; Highlight miscellaneous keywords
     ("\\<\\(begin\\|process\\|end\\)\\>" . font-lock-keyword-face)
     ; Highlight PowerShell cmdlets
-    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face)
-    ; Highlight member accessors
-    (("\\(\\$[a-zA-Z0-9_]+\\.\\)\\([a-zA-Z0-9_]+\\)"  (2 font-lock-function-name-face nil t))))
+    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face))
   "Keyword highlighting specification for `koopa-mode`.")
 
 ;; For example, defining indentation rules, keybindings for common commands, etc.
 
 
 ;; Create a variable for the PowerShell executable
-(defcustom koopa-powershell-executable "pwsh"
+(defcustom koopa-powershell-executable
+  (if (executable-find "pwsh") "pwsh"
+                     "powershell")
   "The name of the system's PowerShell executable."
   :type 'string
   :group 'koopa-mode)
 
-(defvar koopa-powershell-cli-arguments '("-i")
+;; Define the PowerShell command line arguments
+(defvar koopa-powershell-cli-arguments '("-NoProfile")
   "Arguments passed to the PowerShell executable.")
-
 
 ;; Define the PowerShell inferior shell buffer
 (defvar koopa-powershell-buffer-name "*PowerShell*"
   "The name of the PowerShell buffer.")
+
 
 ;; Create the PowerShell process
 (defun koopa-run-powershell ()
@@ -95,19 +94,44 @@
   (interactive)
   (let* ((powershell-program koopa-powershell-executable)
 	 (buffer (get-buffer-create koopa-powershell-buffer-name))
-	 (proc-alive (comint-check-proc buffer))
 	 (process (get-buffer-process buffer)))
     ; If the process is dead, reset the mode and restart the process
-    (unless proc-alive
+    (unless (get-buffer-process buffer)
       (with-current-buffer buffer
-	(apply 'make-comint-in-buffer "PowerShell" buffer powershell-program nil koopa-powershell-cli-arguments)
-	(koopa-mode)))
+	(erase-buffer)
+	(apply 'start-process "PowerShell" buffer powershell-program koopa-powershell-cli-arguments)
+	(koopa-mode)
+	(comint-mode)))
     ; If there is a valid buffer, pop to it
     (when buffer
-      (pop-to-buffer buffer))))
-    
-;; Set up PowerShell buffer for auto-completion in koopa-mode
-(add-hook 'koopa-mode-hook (lambda () (setq-local company-backends '(company-files company-capf))))
+      (display-buffer-at-bottom buffer '((inhibit-same-window . t))))))
+
+
+(defun koopa-send-line-to-powershell ()
+  "Send the current line to the *PowerShell* buffer."
+  (interactive)
+  (let ((line (thing-at-point 'line t))
+        (buffer (get-buffer-create koopa-powershell-buffer-name))
+	(process (get-buffer-process (get-buffer-create koopa-powershell-buffer-name))))
+    (when (and process (process-live-p process))
+      (when (and line (not (string-blank-p line)))
+	(comint-send-string (get-buffer-process buffer) line)))
+    (unless process
+      (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
+
+
+(defun koopa-send-buffer-to-powershell ()
+  "Send the entire buffer to the *PowerShell* buffer."
+  (interactive)
+  (let ((buffer (get-buffer-create koopa-powershell-buffer-name))
+        (process (get-buffer-process (get-buffer-create koopa-powershell-buffer-name))))
+    (when (and process (process-live-p process))
+      (with-current-buffer (current-buffer)
+        (comint-send-region process (point-min) (point-max)))
+      (comint-send-string process "\n"))
+    (unless process
+      (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
+
 
 (provide 'koopa-mode)
 ;;; koopa-mode.el ends here
