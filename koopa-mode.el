@@ -94,13 +94,16 @@
   (interactive)
   (let* ((powershell-program koopa-powershell-executable)
 	 (buffer (get-buffer-create koopa-powershell-buffer-name))
-	 (process (get-buffer-process buffer)))
+	 (process-connection-type nil)
+	 (process (get-buffer-process buffer))
+	 (default-directory default-directory)
+         (process-environment (cons "TERM=dumb" process-environment)))
     ; If the process is dead, reset the mode and restart the process
     (unless (get-buffer-process buffer)
       (with-current-buffer buffer
 	(erase-buffer)
 	(apply 'start-process "PowerShell" buffer powershell-program koopa-powershell-cli-arguments)
-	(koopa-mode)
+        (koopa-mode)
 	(comint-mode)))
     ; If there is a valid buffer, pop to it
     (when buffer
