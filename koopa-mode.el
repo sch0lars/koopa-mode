@@ -82,7 +82,8 @@
   :type 'string
   :group 'koopa)
 
-;; Try to determine the system on which PowerShell is being run
+;; Try to determine the operating system on which PowerShell is being run
+;; This is used to spawn a dumb terminal for *nix OSes
 (defvar koopa-is-running-on-windows
   (if (executable-find "powershell")
     t
@@ -108,19 +109,22 @@
     (save-excursion
       ;; Go to the beginning of the line
       (beginning-of-line)
-      ;; If we are not at the beginning of the cursor and we are
-      ;; not in an indentation block, 
-      (while (and (not (bobp)) (not in-indentable-block))
+      ;; As long as we are not at the beginning of the buffer, keep checking lines
+      (while (not (bobp))
+	;; Check for closing braces on the current line
+	(beginning-of-line)
+	(if (looking-at ".*\\(}\\|)\\|\\]\\)$")
+	    (setq indent-level (1- indent-level)))
 	;; Go to the indentation on the previous line
         (forward-line -1)
-        (back-to-indentation)
+        (beginning-of-line)
 	;; Check for indentable characters
         (cond
-         ((looking-at ".*}")
+         ((looking-at ".*\\(}\\|)\\|\\]\\)$")
           (setq indent-level (max (1- indent-level) 0))
 	  (if (= indent-level 0)
 		 (setq in-indentable-block nil)))
-         ((looking-at ".*{")
+         ((looking-at ".*\\({\\|(\\|\\[\\)$")
           (setq indent-level (1+ indent-level))
           (setq in-indentable-block t))
          ((or (looking-at "\\s-*$") (looking-at "#"))
