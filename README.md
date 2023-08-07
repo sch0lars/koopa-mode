@@ -1,8 +1,21 @@
 # koopa-mode
 An Emacs major mode for Microsoft PowerShell
 
+
+## Prerequisites
+
+### `company-mode`
+
+`koopa-mode` uses [`company-mode`](https://company-mode.github.io/manual/Getting-Started.html) for autocompletion. To install `company-mode`, use the following command in Emacs:
+
+```
+M-x package-install RET company RET
+```
+
+
 ## Installation
 
+### Manual
 Currently, `koopa-mode` has to be manually installed.
 
 To install, first clone the repo.
@@ -18,7 +31,9 @@ Then, add the following to your `init.el`:
 (require 'koopa-mode)
 ```
 
-**Optional**: To automatically associate PowerShell files with `koopa-mode`, add the following to your `init.el`:
+## File Associations
+
+To automatically associate PowerShell files with `koopa-mode`, add the following to your `init.el`:
 
 ```emacs-lisp
 (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
