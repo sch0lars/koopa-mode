@@ -1,5 +1,8 @@
 ;;; koopa-mode.el --- A major mode for Microsoft PowerShell
 
+(require 'cl-lib)
+(require 'company)
+
 ;;; Code:
 ;; Define koopa-mode
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
@@ -13,12 +16,19 @@
        '(koopa-mode-font-lock-keywords nil t))
   ;; Set the indent-line-function
   (setq-local indent-line-function #'koopa-indent-line)
-  ;;; Keybindings
+  ;; Keybindings
   (local-set-key (kbd "RET") 'koopa-newline-and-indent)
   (local-set-key (kbd "TAB") 'koopa-indent-line)
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
-  (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell))
+  (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell)
+  (local-set-key (kbd "C-<tab>") 'koopa-trigger-company-complete)
+
+  ;; Set up company-mode in koopa-mode
+  (add-hook 'koopa-mode-hook
+            (lambda ()
+              (company-mode t)
+              (setq-local company-backends '(koopa-company-backend)))))
 
 ;; Define the syntax table
 (defconst koopa-mode-syntax-table
@@ -98,6 +108,15 @@
 (defvar koopa-powershell-buffer-name "*PowerShell*"
   "The name of the PowerShell buffer.")
 
+(defcustom koopa-powershell-cmdlets
+  (let* ((cmd (format "%s -c \"Get-Command -CommandType Cmdlet | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
+	 (cmdlets (split-string (shell-command-to-string cmd) "\n" t)))
+    ;; Remove any whitespace from the cmdlets
+    (mapc 'string-trim cmdlets))
+  "All of the built-in cmdlets for PowerShell."
+  :type 'list
+  :group 'koopa)
+
 ;; Define the indentation level
 (defun koopa-indent-line ()
   "Indent current line according to PowerShell indentation conventions."
@@ -160,7 +179,7 @@
     ; If we are using *nix, create a dumb terminal to handle escape sequences
     (unless koopa-is-running-on-windows
       (message "*nix OS detected, using dumb terminal")
-      (process-environment (cons "TERM=dumb" process-environment)))
+      (setq process-environment (cons "TERM=dumb" process-environment)))
     ;; If the process is dead, reset the mode and restart the process
     (unless (get-buffer-process buffer)
       (with-current-buffer buffer
@@ -201,6 +220,32 @@
     ; If the PowerShell process is not started, notify the user
     (unless process
       (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
+
+;; Get the PowerShell cmdlet suggestions for a prefix
+(defun koopa-company-complete-powershell-cmdlets (arg)
+  "Generate a list of PowerShell cmdlets as completion candidates."
+  (let ((matching-cmdlets '()))
+    (cl-loop for cmdlet in koopa-powershell-cmdlets
+             when (string-prefix-p arg cmdlet)
+             collect cmdlet into matching-cmdlets
+             finally return matching-cmdlets)))
+
+
+(defun koopa-company-backend (command &optional arg &rest _ignored)
+  "Company backend for PowerShell cmdlet completion in koopa-mode."
+  (interactive (list 'interactive))
+  (cond
+    ((eq command 'interactive) (company-begin-backend 'koopa-company-backend))
+    ((eq command 'prefix) (and (eq major-mode 'koopa-mode) (company-grab-symbol)))
+    ((eq command 'candidates) (koopa-company-complete-powershell-cmdlets arg))
+    ((eq command 'duplicates) t)))
+
+;; Define a function to trigger company completion manually
+(defun koopa-trigger-company-complete ()
+  "Invoke company completion for PowerShell cmdlets."
+  (interactive)
+  (company-complete))
+
 
 
 (provide 'koopa-mode)
