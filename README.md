@@ -16,6 +16,7 @@ M-x package-install RET company RET
 ## Installation
 
 ### Manual
+
 Currently, `koopa-mode` has to be manually installed.
 
 To install, first clone the repo.
@@ -38,6 +39,15 @@ To automatically associate PowerShell files with `koopa-mode`, add the following
 ```emacs-lisp
 (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
 ```
+
+## Keybindings
+
+| Command                           | Keybinding | Description                                      |
+|-----------------------------------|------------|--------------------------------------------------|
+| `koopa-run-powershell`            | `C-c C-p`  | Spawns a PowerShell process in a new buffer      |
+| `koopa-send-line-to-powershell`   | `C-c C-c`  | Send the current line to the PowerShell process  |
+| `koopa-send-buffer-to-powershell` | `C-c C-b`  | Send the entire buffer to the PowerShell process |
+| `koopa-trigger-company-complete`  | `C-<tab>`  | Triggers the `company` autocomplete              |
 
 ## Demo
 
