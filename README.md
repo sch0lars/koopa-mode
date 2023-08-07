@@ -14,7 +14,7 @@ git clone https://github.com/sch0lars/koopa-mode.git
 Then, add the following to your `init.el`:
 
 ```emacs-lisp
-(add-to-list 'load-path "/mnt/c/Users/tph19/Projects/koopa-mode")
+(add-to-list 'load-path "/path/to/koopa-mode")
 (require 'koopa-mode)
 ```
 
