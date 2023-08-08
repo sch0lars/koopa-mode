@@ -122,41 +122,32 @@
   "Indent current line according to PowerShell indentation conventions."
   (interactive)
   (let ((pos (point))
-        (indent-level 0)
-        (in-indentable-block nil))
+        (indent-level 0))
     ;; Save the cursor position
     (save-excursion
-      ;; Go to the beginning of the line
-      (beginning-of-line)
-      ;; As long as we are not at the beginning of the buffer, keep checking lines
-      (while (not (bobp))
-	;; Check for closing braces on the current line
+      ;; Check for closing braces on the current line
 	(beginning-of-line)
 	(if (looking-at ".*\\(}\\|)\\|\\]\\)$")
 	    (setq indent-level (1- indent-level)))
-	;; Go to the indentation on the previous line
+      ;; As long as we are not at the beginning of the buffer, keep checking lines
+      (while (not (bobp))
+	;; Check the indentation on the previous line
         (forward-line -1)
         (beginning-of-line)
-	;; Check for indentable characters
+	;; Check for matching open/close characters
         (cond
-         ((looking-at ".*\\(}\\|)\\|\\]\\)$")
-          (setq indent-level (max (1- indent-level) 0))
-	  (if (= indent-level 0)
-		 (setq in-indentable-block nil)))
-         ((looking-at ".*\\({\\|(\\|\\[\\)$")
-          (setq indent-level (1+ indent-level))
-          (setq in-indentable-block t))
-         ((or (looking-at "\\s-*$") (looking-at "#"))
-          nil)))
-      (beginning-of-line))
-  ; Multiply the indent level by the `koopa-indent-offset`
-  (let* ((base-indent (* koopa-indent-offset indent-level))
-         (current-indent (current-indentation))
-         (indent-change (- base-indent current-indent)))
-    (if (and (not (zerop indent-change)) (not (looking-at "[ \t]*$")))
-        (save-excursion (indent-line-to base-indent))
-      ; Indent the line
-      (indent-line-to current-indent)))
+	 ;; If there are closing characters, decrease the indentation level
+         ((looking-at ".*\\(}\\|)\\|\\]\\)$") (setq indent-level (1- indent-level)))
+	  ;; If there are opening characters, increase the indentation level
+         ((looking-at ".*\\({\\|(\\|\\[\\)$") (setq indent-level (1+ indent-level)))
+	 ;; If there are no opening or closing characters, do nothing
+	 nil)))
+      ;; If the indent level is negative, set it to 0
+      (if (< indent-level 0)
+	  (setq indent-level 0))
+      ;; Multiply the indent level by the `koopa-indent-offset` and indent the line
+      (indent-line-to (* indent-level koopa-indent-offset))
+  ;; Return to the initial position
   (goto-char pos)))
 
 ;; Define a function to insert a new line and adjust indentation
