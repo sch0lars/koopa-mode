@@ -74,7 +74,11 @@
     ;; Highlight miscellaneous keywords
     ("\\<\\(begin\\|process\\|end\\)\\>" . font-lock-keyword-face)
     ;; Highlight PowerShell cmdlets
-    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face))
+    ("\\<[a-zA-Z]+\\-[a-zA-Z]+" . font-lock-function-name-face)
+    ;; Highlight command line arguments
+    ("\s\\{1\\}--?[a-zA-Z0-9-]+" . font-lock-comment-face)
+    ;; Highlight special characters
+    ("`\\(0\\|a\\|b\\|e\\|f\\|n\\|r\\|t\\|u{\\w+}\\|v\\)" 0 font-lock-builtin-face t))
   "Keyword highlighting specification for `koopa-mode`.")
 
 ;; Define the indentation offset for PowerShell
