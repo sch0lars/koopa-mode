@@ -109,7 +109,7 @@
   "The name of the PowerShell buffer.")
 
 (defcustom koopa-powershell-cmdlets
-  (let* ((cmd (format "%s -c \"Get-Command -CommandType Cmdlet | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
+  (let* ((cmd (format "%s -NoProfile -c \"Get-Command -CommandType Cmdlet | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
 	 (cmdlets (split-string (shell-command-to-string cmd) "\n" t)))
     ;; Remove any whitespace from the cmdlets
     (mapc 'string-trim cmdlets))
