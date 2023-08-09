@@ -1,9 +1,52 @@
-;;; koopa-mode.el --- A major mode for Microsoft PowerShell
+;;;   koopa-mode.el --- A major mode for Microsoft PowerShell
+
+;;    Author: Tyler Hooks
+;;    URL: https://github.com/sch0lars/koopa-mode
+;;    Version: 1.0
+;;    Compatibility: GNU Emacs 27.x
+;;    Keywords: powershell, convenience
+;;    Package-Requires: ((cl-lib "1.0") (company-mode "0.9.13"))
+
+
+;;    Copyright (C) 2023 Tyler Hooks
+;;
+;;    This program is free software: you can redistribute it and/or modify
+;;    it under the terms of the GNU General Public License as published by
+;;    the Free Software Foundation, either version 3 of the License, or
+;;    (at your option) any later version.
+;;
+;;    This program is distributed in the hope that it will be useful,
+;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;    GNU General Public License for more details.
+;;
+;;    You should have received a copy of the GNU General Public License
+;;    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+;;;   Commentary:
+;;
+;;    This file provides `koopa-mode`, a major mode for Microsoft PowerShell
+;;
+;;    Usage:
+;;
+;;        To manually install `koopa-mode`, add the following to your init.el:
+;;
+;;        (add-to-list 'load-path "/path/to/koopa-mode")
+;;        (require 'koopa-mode)
+;;
+;;
+;;        To associate PowerShell files with `koopa-mode`, add the following
+;;        to your init.el:
+;;
+;;        (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
+
+
+;;; Code:
 
 (require 'cl-lib)
 (require 'company)
 
-;;; Code:
 ;; Define koopa-mode
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
   "A major mode for editing Microsoft PowerShell scripts."
@@ -133,12 +176,12 @@
   :group 'koopa)
 
 (defcustom koopa-custom-powershell-cmdlets '()
-  "User-created PowerShell cmdlets."
+  "User-definedPowerShell cmdlets."
   :type 'list
   :group 'koopa)
 
 (defcustom koopa-custom-powershell-variables '()
-  "User-created PowerShell variables."
+  "User-defined PowerShell variables."
   :type 'list
   :group 'koopa)
 
@@ -161,12 +204,10 @@
 
 ;; Automatically adjust indentation for a line
 (defun koopa-auto-indent ()
-  "Automatically indent current line according to PowerShell indentation conventions."
+  "Automatically indent the current line according to PowerShell indentation conventions."
   (interactive)
   (let ((pos (point))
         (indent-level 0))
-    ;; DEBUG
-    ;; (message (format "DEBUG: Initial indent: %d" indent-level))
     ;; Save the cursor position
     (save-excursion
       ;; Check for closing braces on the current line
@@ -225,7 +266,7 @@
 	(apply 'start-process "PowerShell" buffer powershell-program koopa-powershell-cli-arguments)
         (koopa-mode)
 	(comint-mode)))
-    ;; If there is a valid buffer, pop to it
+    ;; If there is a valid buffer, open it
     (when buffer
       (display-buffer-at-bottom buffer '((inhibit-same-window . t))))))
 
@@ -255,7 +296,7 @@
       (with-current-buffer (current-buffer)
         (comint-send-region process (point-min) (point-max)))
       (comint-send-string process "\n"))
-    ; If the PowerShell process is not started, notify the user
+    ;; If the PowerShell process is not started, notify the user
     (unless process
       (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
 
@@ -272,7 +313,7 @@
 (defun koopa-company-complete-powershell-variables (arg)
   "Generate a list of PowerShell cmdlets as completion candidates."
   (let ((matching-variables '()))
-    (cl-loop for variable in koopa-powershell-variables
+    (cl-loop for variable in (append koopa-powershell-variables koopa-custom-powershell-variables)
              when (string-prefix-p arg variable)
              collect variable into matching-variables
              finally return matching-variables)))
@@ -328,7 +369,8 @@
   (interactive)
   (company-complete))
 
-;; Add hooks here
+;;; Hooks
+;; Add hook to check for new user-defined cmdlets and variables
 (add-hook 'post-command-hook #'koopa-monitor-code-changes)
 
 (provide 'koopa-mode)

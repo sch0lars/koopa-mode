@@ -5,7 +5,7 @@ An Emacs major mode for Microsoft PowerShell
 
 * Syntax highlighting and indentation
 * The ability to spawn – and send code to – a PowerShell process in a new buffer
-* Autocompletion for built-in cmdlets
+* Autocompletion for both built-in and user-defined cmdlets and variables
 
 ## Prerequisites
 
@@ -98,7 +98,7 @@ To tell `koopa-mode` you are using *nix, use the following command:
 |-----------------------------------|--------------|---------------------------------------------------------------------|
 | `koopa-indent-line`               | `<tab>`      | Indents the line by `koopa-indent-offset`                           |
 | `koopa-dedent-line`               | `<backtab>`  | Dedents the line by `koopa-indent-offset`                           |
-| `koopa-auto-indent`               | `C-<tab>`    | Automatically indents the line to the appropriate indentation level |
+| `koopa-auto-indent`               | `C-c <tab>`    | Automatically indents the line to the appropriate indentation level |
 | `koopa-newline-and-indent`        | `C-<return>` | Indents to the appropriate indentation level and inserts a newline  |
 | `koopa-run-powershell`            | `C-c C-p`    | Spawns a PowerShell process in a new buffer                         |
 | `koopa-send-line-to-powershell`   | `C-c C-c`    | Send the current line to the PowerShell process                     |
@@ -110,10 +110,10 @@ To tell `koopa-mode` you are using *nix, use the following command:
 
 ## Known Issues
 
-- On Windows, autocompletion sometimes adds whitespace at the end the cmdlet
+- On Windows, autocompletion sometimes adds whitespace at the end of the cmdlet
   - In the meantime, a workaround is to autocomplete using `TAB` and then pressing `C-g`
   - The additional whitespace can also affect indentation, so if a line is not indenting properly, then you may have extra whitespace at the end
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.en.html)
