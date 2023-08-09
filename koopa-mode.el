@@ -64,7 +64,7 @@
     ;; Highlight documentation keywords
     ("\\.\\(DESCRIPTION\\|EXAMPLE\\|INPUTS\\|LINK\\|NOTES\\|OUTPUTS\\|PARAMETER\\|SYNOPSIS\\)" 0 font-lock-doc-face t)
     ;; Highlight variables that start with a $
-    ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" 0 font-lock-variable-name-face t)
+    ("\\$\\(\\$\\|\\?\\|\\^\\|{?[a-zA-Z_][a-zA-Z0-9_]*}?\\)" 0 font-lock-variable-name-face t)
     ;; Highlight objects from the DotNet framework
     ("\\[[a-zA-Z0-9_\\.]+\\]:\\{2\\}[a-zA-Z0-9_\\.]+" . font-lock-builtin-face)
     ;; Highlight control flow keywords
@@ -123,6 +123,25 @@
   :type 'list
   :group 'koopa)
 
+(defcustom koopa-powershell-variables
+  (let* ((cmd (format "%s -NoProfile -c \"Get-Variable | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
+       (variables (split-string (shell-command-to-string cmd) "\n" t))
+       (prefixed-variables (mapcar (lambda (var) (concat "$" var)) variables)))
+    prefixed-variables)
+  "All of the built-in variables for PowerShell."
+  :type 'list
+  :group 'koopa)
+
+(defcustom koopa-custom-powershell-cmdlets '()
+  "User-created PowerShell cmdlets."
+  :type 'list
+  :group 'koopa)
+
+(defcustom koopa-custom-powershell-variables '()
+  "User-created PowerShell variables."
+  :type 'list
+  :group 'koopa)
+
 ;; Manually indent a line
 (defun koopa-indent-line ()
   "Manually indent a line by `koopa-indent-offset`."
@@ -162,7 +181,7 @@
 	;; Check for matching open/close characters
         (cond
 	 ;; If there are closing characters, decrease the indentation level
-         ((looking-at ".*\\(}\\|)\\|\\]\\)$")
+         ((looking-at "^[^\n{(\\[]*\\(}\\|)\\|\\]\\)$")
 	  (setq indent-level (1- indent-level)))
 	  ;; If there are opening characters, increase the indentation level
          ((looking-at ".*\\({\\|(\\|\\[\\)$")
@@ -244,20 +263,64 @@
 (defun koopa-company-complete-powershell-cmdlets (arg)
   "Generate a list of PowerShell cmdlets as completion candidates."
   (let ((matching-cmdlets '()))
-    (cl-loop for cmdlet in koopa-powershell-cmdlets
+    (cl-loop for cmdlet in (append koopa-powershell-cmdlets koopa-custom-powershell-cmdlets)
              when (string-prefix-p arg cmdlet)
              collect cmdlet into matching-cmdlets
              finally return matching-cmdlets)))
 
+;; Get the PowerShell variable suggestions for a prefix
+(defun koopa-company-complete-powershell-variables (arg)
+  "Generate a list of PowerShell cmdlets as completion candidates."
+  (let ((matching-variables '()))
+    (cl-loop for variable in koopa-powershell-variables
+             when (string-prefix-p arg variable)
+             collect variable into matching-variables
+             finally return matching-variables)))
 
+;; Get user-defined cmdlets
+(defun koopa-extract-custom-cmdlets-from-buffer ()
+  "Extract user-defined cmdlets from the buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (let (cmdlets)
+        (while (re-search-forward "\\(Function\\|function\\)\s+\\([a-zA-Z0-9-]+\\)" nil t)
+          (push  (substring-no-properties (match-string 2)) cmdlets))
+        (setq koopa-custom-powershell-cmdlets cmdlets))))
+
+;; Get user-defined variables
+(defun koopa-extract-custom-variables-from-buffer ()
+  "Extract user-defined variables from the buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (let (variables)
+        (while (re-search-forward "\\(\\$[a-zA-Z0-9_]+\\)\s*=\s*[^=].*" nil t)
+          (push  (substring-no-properties (match-string 1)) variables))
+        (setq koopa-custom-powershell-variables variables))))
+
+;; Monitor the buffer for user-defined cmdlets and variables
+(defun koopa-monitor-code-changes ()
+  "Monitor code changes and update custom cmdlets and variables lists."
+  (when (and (eq major-mode 'koopa-mode)
+             (buffer-modified-p))
+    (koopa-extract-custom-cmdlets-from-buffer)
+    (koopa-extract-custom-variables-from-buffer)))
+
+;; Create the company backend
 (defun koopa-company-backend (command &optional arg &rest _ignored)
-  "Company backend for PowerShell cmdlet completion in koopa-mode."
+  "Company backend for PowerShell cmdlet and variable completion in koopa-mode."
   (interactive (list 'interactive))
   (cond
     ((eq command 'interactive) (company-begin-backend 'koopa-company-backend))
     ((eq command 'prefix) (and (eq major-mode 'koopa-mode) (company-grab-symbol)))
-    ((eq command 'candidates) (koopa-company-complete-powershell-cmdlets arg))
+    ((eq command 'candidates)
+     (let ((completion-candidates (append
+                                   koopa-powershell-cmdlets
+                                   koopa-powershell-variables
+                                   koopa-custom-powershell-cmdlets
+                                   koopa-custom-powershell-variables)))
+       (all-completions arg completion-candidates)))
     ((eq command 'duplicates) t)))
+
 
 ;; Define a function to trigger company completion manually
 (defun koopa-trigger-company-complete ()
@@ -265,7 +328,8 @@
   (interactive)
   (company-complete))
 
-
+;; Add hooks here
+(add-hook 'post-command-hook #'koopa-monitor-code-changes)
 
 (provide 'koopa-mode)
 ;;; koopa-mode.el ends here

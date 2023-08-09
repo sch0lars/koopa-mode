@@ -98,11 +98,11 @@ To tell `koopa-mode` you are using *nix, use the following command:
 |-----------------------------------|--------------|---------------------------------------------------------------------|
 | `koopa-indent-line`               | `<tab>`      | Indents the line by `koopa-indent-offset`                           |
 | `koopa-dedent-line`               | `<backtab>`  | Dedents the line by `koopa-indent-offset`                           |
+| `koopa-auto-indent`               | `C-<tab>`    | Automatically indents the line to the appropriate indentation level |
 | `koopa-newline-and-indent`        | `C-<return>` | Indents to the appropriate indentation level and inserts a newline  |
 | `koopa-run-powershell`            | `C-c C-p`    | Spawns a PowerShell process in a new buffer                         |
 | `koopa-send-line-to-powershell`   | `C-c C-c`    | Send the current line to the PowerShell process                     |
 | `koopa-send-buffer-to-powershell` | `C-c C-b`    | Send the entire buffer to the PowerShell process                    |
-| `koopa-auto-indent`               | `C-<tab>`    | Automatically indents the line to the appropriate indentation level |
 
 ## Demo
 
