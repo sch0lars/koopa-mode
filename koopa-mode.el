@@ -14,15 +14,15 @@
   ;; Make font-lock keywords case-insensitive
   (set (make-local-variable 'font-lock-defaults)
        '(koopa-mode-font-lock-keywords nil t))
-  ;; Set the indent-line-function
-  (setq-local indent-line-function #'koopa-indent-line)
   ;; Keybindings
-  (local-set-key (kbd "RET") 'koopa-newline-and-indent)
+  (local-set-key (kbd "RET") 'newline)
   (local-set-key (kbd "TAB") 'koopa-indent-line)
+  (local-set-key (kbd "C-<return>") 'koopa-newline-and-indent)
+  (local-set-key (kbd "<backtab>") 'koopa-dedent-line)
+  (local-set-key (kbd "C-c TAB") 'koopa-auto-indent)
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
   (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell)
-  (local-set-key (kbd "C-<tab>") 'koopa-trigger-company-complete)
 
   ;; Set up company-mode in koopa-mode
   (add-hook 'koopa-mode-hook
@@ -61,6 +61,8 @@
 (defconst koopa-mode-font-lock-keywords
   ;; Highlight comments starting with #
   '(("\\(#.*\\)" 1 font-lock-comment-face)
+    ;; Highlight documentation keywords
+    ("\\.\\(DESCRIPTION\\|EXAMPLE\\|INPUTS\\|LINK\\|NOTES\\|OUTPUTS\\|PARAMETER\\|SYNOPSIS\\)" 0 font-lock-doc-face t)
     ;; Highlight variables that start with a $
     ("\\${?[a-zA-Z_][a-zA-Z0-9_]*}?" 0 font-lock-variable-name-face t)
     ;; Highlight objects from the DotNet framework
@@ -70,7 +72,7 @@
     ;; Highlight loop control keywords
     ("\\<\\(break\\|continue\\)\\>" . font-lock-keyword-face)
     ;; Highlight script block keywords
-    ("\\<\\(function\\|param\\|return\\)\\>" . font-lock-keyword-face)
+    ("\\<\\(function\\|param\\|return\\)\\>" 0 font-lock-keyword-face t)
     ;; Highlight miscellaneous keywords
     ("\\<\\(begin\\|process\\|end\\)\\>" . font-lock-keyword-face)
     ;; Highlight PowerShell cmdlets
@@ -121,17 +123,36 @@
   :type 'list
   :group 'koopa)
 
-;; Define the indentation level
+;; Manually indent a line
 (defun koopa-indent-line ()
-  "Indent current line according to PowerShell indentation conventions."
+  "Manually indent a line by `koopa-indent-offset`."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (indent-line-to (+ (current-indentation) koopa-indent-offset))))
+
+;; Manually dedent a line
+(defun koopa-dedent-line ()
+  "Manually dedent a line by `koopa-indent-offset`."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    ;; Ensure we don't end up dedenting to a negative value
+    (indent-line-to (max 0 (- (current-indentation) koopa-indent-offset)))))
+
+;; Automatically adjust indentation for a line
+(defun koopa-auto-indent ()
+  "Automatically indent current line according to PowerShell indentation conventions."
   (interactive)
   (let ((pos (point))
         (indent-level 0))
+    ;; DEBUG
+    ;; (message (format "DEBUG: Initial indent: %d" indent-level))
     ;; Save the cursor position
     (save-excursion
       ;; Check for closing braces on the current line
 	(beginning-of-line)
-	(if (looking-at ".*\\(}\\|)\\|\\]\\)$")
+	(if (looking-at "^[^\n{(\\[]*\\(}\\|)\\|\\]\\)$")
 	    (setq indent-level (1- indent-level)))
       ;; As long as we are not at the beginning of the buffer, keep checking lines
       (while (not (bobp))
@@ -141,9 +162,11 @@
 	;; Check for matching open/close characters
         (cond
 	 ;; If there are closing characters, decrease the indentation level
-         ((looking-at ".*\\(}\\|)\\|\\]\\)$") (setq indent-level (1- indent-level)))
+         ((looking-at ".*\\(}\\|)\\|\\]\\)$")
+	  (setq indent-level (1- indent-level)))
 	  ;; If there are opening characters, increase the indentation level
-         ((looking-at ".*\\({\\|(\\|\\[\\)$") (setq indent-level (1+ indent-level)))
+         ((looking-at ".*\\({\\|(\\|\\[\\)$")
+	  (setq indent-level (1+ indent-level)))
 	 ;; If there are no opening or closing characters, do nothing
 	 nil)))
       ;; If the indent level is negative, set it to 0
@@ -158,8 +181,9 @@
 (defun koopa-newline-and-indent ()
   "Insert a newline and adjust PowerShell indentation."
   (interactive)
-  (newline)
-  (koopa-indent-line))
+  (koopa-auto-indent)
+  (end-of-line)
+  (newline))
 
 ;; Create the PowerShell process
 (defun koopa-run-powershell ()
