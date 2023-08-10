@@ -5,7 +5,7 @@
 ;;    Version: 1.0
 ;;    Compatibility: GNU Emacs 27.x
 ;;    Keywords: powershell, convenience
-;;    Package-Requires: ((cl-lib "1.0") (company-mode "0.9.13"))
+;;    Package-Requires: ((cl-lib "1.0") (company "0.9.13"))
 
 
 ;;    Copyright (C) 2023 Tyler Hooks
