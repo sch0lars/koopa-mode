@@ -1,45 +1,45 @@
-;;;   koopa-mode.el --- A major mode for Microsoft PowerShell
+;;; koopa-mode.el --- A major mode for Microsoft PowerShell
 
-;;    Author: Tyler Hooks
-;;    URL: https://github.com/sch0lars/koopa-mode
-;;    Version: 1.0
-;;    Compatibility: GNU Emacs 27.x
-;;    Keywords: powershell, convenience
-;;    Package-Requires: ((cl-lib "1.0") (company "0.9.13"))
-
-
-;;    Copyright (C) 2023 Tyler Hooks
-;;
-;;    This program is free software: you can redistribute it and/or modify
-;;    it under the terms of the GNU General Public License as published by
-;;    the Free Software Foundation, either version 3 of the License, or
-;;    (at your option) any later version.
-;;
-;;    This program is distributed in the hope that it will be useful,
-;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;    GNU General Public License for more details.
-;;
-;;    You should have received a copy of the GNU General Public License
-;;    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;; Author: Tyler Hooks
+;; URL: https://github.com/sch0lars/koopa-mode
+;; Version: 1.0
+;; Compatibility: GNU Emacs 27.x
+;; Keywords: powershell, convenience
+;; Package-Requires: ((company "0.9.13") (emacs "27.1"))
 
 
-;;;   Commentary:
+;; Copyright (C) 2023 Tyler Hooks
 ;;
-;;    This file provides `koopa-mode`, a major mode for Microsoft PowerShell
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 ;;
-;;    Usage:
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 ;;
-;;        To manually install `koopa-mode`, add the following to your init.el:
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+;;; Commentary:
 ;;
-;;        (add-to-list 'load-path "/path/to/koopa-mode")
-;;        (require 'koopa-mode)
+;; This file provides `koopa-mode`, a major mode for Microsoft PowerShell
+;;
+;; Usage:
+;;
+;;     To manually install `koopa-mode`, add the following to your init.el:
+;;
+;;     (add-to-list 'load-path "/path/to/koopa-mode")
+;;     (require 'koopa-mode)
 ;;
 ;;
-;;        To associate PowerShell files with `koopa-mode`, add the following
-;;        to your init.el:
+;;     To associate PowerShell files with `koopa-mode`, add the following
+;;     to your init.el:
 ;;
-;;        (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
+;;     (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
 
 
 ;;; Code:
@@ -98,7 +98,7 @@
     (modify-syntax-entry ?\{ "(}" st)
 
     st)
-  "Syntax table for `koopa-mode`.")
+  "Syntax table for `koopa-mode'.")
 
 ;; Define the font-lock keywords
 (defconst koopa-mode-font-lock-keywords
@@ -147,7 +147,7 @@
   (if (executable-find "powershell")
     t
     nil)
-  "Indicates whether koopa-mode is being run on Windows.")
+  "Indicates whether `koopa-mode' is being run on Windows.")
 
 ;; Define the PowerShell command line arguments
 (defvar koopa-powershell-cli-arguments '("-NoProfile")
@@ -187,7 +187,7 @@
 
 ;; Manually indent a line
 (defun koopa-indent-line ()
-  "Manually indent a line by `koopa-indent-offset`."
+  "Manually indent a line by `koopa-indent-offset'."
   (interactive)
   (save-excursion
     (beginning-of-line)
@@ -195,7 +195,7 @@
 
 ;; Manually dedent a line
 (defun koopa-dedent-line ()
-  "Manually dedent a line by `koopa-indent-offset`."
+  "Manually dedent a line by `koopa-indent-offset'."
   (interactive)
   (save-excursion
     (beginning-of-line)
