@@ -2,7 +2,7 @@
 
 ;; Author: Tyler Hooks
 ;; URL: https://github.com/sch0lars/koopa-mode
-;; Version: 1.0
+;; Version: 1.2.1
 ;; Compatibility: GNU Emacs 27.x
 ;; Keywords: powershell, convenience
 ;; Package-Requires: ((company "0.9.13") (emacs "27.1"))
@@ -26,17 +26,17 @@
 
 ;;; Commentary:
 ;;
-;; This file provides `koopa-mode`, a major mode for Microsoft PowerShell
+;; This file provides `koopa-mode', a major mode for Microsoft PowerShell
 ;;
 ;; Usage:
 ;;
-;;     To manually install `koopa-mode`, add the following to your init.el:
+;;     To manually install `koopa-mode', add the following to your init.el:
 ;;
 ;;     (add-to-list 'load-path "/path/to/koopa-mode")
 ;;     (require 'koopa-mode)
 ;;
 ;;
-;;     To associate PowerShell files with `koopa-mode`, add the following
+;;     To associate PowerShell files with `koopa-mode', add the following
 ;;     to your init.el:
 ;;
 ;;     (add-to-list 'auto-mode-alist '("\\.ps1\\'" . koopa-mode))
@@ -47,7 +47,7 @@
 (require 'cl-lib)
 (require 'company)
 
-;; Define koopa-mode
+;; Define `koopa-mode'
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
   "A major mode for editing Microsoft PowerShell scripts."
   ;; Set the syntax table
@@ -63,11 +63,12 @@
   (local-set-key (kbd "C-<return>") 'koopa-newline-and-indent)
   (local-set-key (kbd "<backtab>") 'koopa-dedent-line)
   (local-set-key (kbd "C-c TAB") 'koopa-auto-indent)
+  (local-set-key (kbd "C-c m") 'koopa-company-backend)
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
   (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell)
 
-  ;; Set up company-mode in koopa-mode
+  ;; Set up `company-mode' in `koopa-mode'
   (add-hook 'koopa-mode-hook
             (lambda ()
               (company-mode t)
@@ -108,7 +109,7 @@
     ("\\.\\(DESCRIPTION\\|EXAMPLE\\|INPUTS\\|LINK\\|NOTES\\|OUTPUTS\\|PARAMETER\\|SYNOPSIS\\)" 0 font-lock-doc-face t)
     ;; Highlight variables that start with a $
     ("\\$\\(\\$\\|\\?\\|\\^\\|{?[a-zA-Z_][a-zA-Z0-9_]*}?\\)" 0 font-lock-variable-name-face t)
-    ;; Highlight objects from the DotNet framework
+    ;; Highlight objects from the .NET framework
     ("\\[[a-zA-Z0-9_\\.]+\\]:\\{2\\}[a-zA-Z0-9_\\.]+" . font-lock-builtin-face)
     ;; Highlight control flow keywords
     ("\\<\\(for\\|if\\|else\\|elseif\\|switch\\|foreach\\|while\\|do\\)\\>" . font-lock-keyword-face)
@@ -157,33 +158,73 @@
 (defvar koopa-powershell-buffer-name "*PowerShell*"
   "The name of the PowerShell buffer.")
 
+;; Define the built-in PowerShell cmdlets
 (defcustom koopa-powershell-cmdlets
   (let* ((cmd (format "%s -NoProfile -c \"Get-Command -CommandType Cmdlet | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
 	 (cmdlets (split-string (shell-command-to-string cmd) "\n" t)))
     ;; Remove any whitespace from the cmdlets
-    (mapc 'string-trim cmdlets))
+    (mapcar 'string-trim cmdlets))
   "All of the built-in cmdlets for PowerShell."
   :type 'list
   :group 'koopa)
 
+;; Define the built-in PowerShell variables
 (defcustom koopa-powershell-variables
   (let* ((cmd (format "%s -NoProfile -c \"Get-Variable | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
        (variables (split-string (shell-command-to-string cmd) "\n" t))
        (prefixed-variables (mapcar (lambda (var) (concat "$" var)) variables)))
-    prefixed-variables)
+   (mapcar 'string-trim prefixed-variables))
   "All of the built-in variables for PowerShell."
   :type 'list
   :group 'koopa)
 
+;; Define the user-defined PowerShell cmdlets
 (defcustom koopa-custom-powershell-cmdlets '()
   "User-definedPowerShell cmdlets."
   :type 'list
   :group 'koopa)
 
+;; Define the user-defined PowerShell variables
 (defcustom koopa-custom-powershell-variables '()
   "User-defined PowerShell variables."
   :type 'list
   :group 'koopa)
+
+;; Define the built-in .NET types
+(defcustom koopa-powershell-dotnet-types
+  (let* ((cmd (format "%s -NoProfile -c \"Get-TypeData | Select-Object -Property TypeName | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
+         (dotnet-types (split-string (shell-command-to-string cmd) "\n" t))
+         ;; Remove any whitespace from the dotnet types
+         (trimmed-dotnet-types (mapcar 'string-trim dotnet-types))
+         (bracketed-dotnet-types (mapcar (lambda (dotnet-type) (concat dotnet-type "]")) trimmed-dotnet-types)))
+    bracketed-dotnet-types)
+  "All of the built-in .NET types for PowerShell."
+  :type 'list
+  :group 'koopa)
+
+;; Define member methods
+(defcustom koopa-powershell-member-methods '()
+  "Member methods for PowerShell objects."
+  :type 'list
+  :group 'koopa)
+
+;; Define .NET methods
+(defcustom koopa-powershell-dotnet-methods '()
+  "Methods for .NET types."
+  :type 'list
+  :group 'koopa)
+
+;; Define the current line in `koopa-mode'
+(defvar koopa-current-line-number (line-number-at-pos)
+  "The current line number in `koopa-mode'.")
+
+;; Create a hook for newlines
+(defvar koopa-newline-hook nil
+  "A hook to check if the RETURN key was pressed and a newline was inserted.")
+
+;; Create a hook for double colons
+(defvar koopa-double-colon-hook nil
+  "A hook to check when a .NET type is being invoked.")
 
 ;; Manually indent a line
 (defun koopa-indent-line ()
@@ -232,7 +273,7 @@
       ;; If the indent level is negative, set it to 0
       (if (< indent-level 0)
 	  (setq indent-level 0))
-      ;; Multiply the indent level by the `koopa-indent-offset` and indent the line
+      ;; Multiply the indent level by the `koopa-indent-offset' and indent the line
       (indent-line-to (* indent-level koopa-indent-offset))
   ;; Return to the initial position
   (goto-char pos)))
@@ -270,7 +311,7 @@
     (when buffer
       (display-buffer-at-bottom buffer '((inhibit-same-window . t))))))
 
-;; This sends a line to the PowerShell process spawned from `koopa-run-powershell`
+;; This sends a line to the PowerShell process spawned from `koopa-run-powershell'
 (defun koopa-send-line-to-powershell ()
   "Send the current line to the *PowerShell* buffer."
   (interactive)
@@ -285,7 +326,7 @@
     (unless process
       (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
 
-;; This sends the entire buffer to the PowerShell process spawned from `koopa-run-powershell`
+;; This sends the entire buffer to the PowerShell process spawned from `koopa-run-powershell'
 (defun koopa-send-buffer-to-powershell ()
   "Send the entire buffer to the *PowerShell* buffer."
   (interactive)
@@ -300,23 +341,30 @@
     (unless process
       (message "PowerShell process is not running. Use `C-c C-p` or `M-x koopa-run-powershell` to start a PowerShell process."))))
 
-;; Get the PowerShell cmdlet suggestions for a prefix
-(defun koopa-company-complete-powershell-cmdlets (arg)
-  "Generate a list of PowerShell cmdlets as completion candidates."
-  (let ((matching-cmdlets '()))
-    (cl-loop for cmdlet in (append koopa-powershell-cmdlets koopa-custom-powershell-cmdlets)
-             when (string-prefix-p arg cmdlet)
-             collect cmdlet into matching-cmdlets
-             finally return matching-cmdlets)))
-
-;; Get the PowerShell variable suggestions for a prefix
-(defun koopa-company-complete-powershell-variables (arg)
-  "Generate a list of PowerShell cmdlets as completion candidates."
-  (let ((matching-variables '()))
-    (cl-loop for variable in (append koopa-powershell-variables koopa-custom-powershell-variables)
-             when (string-prefix-p arg variable)
-             collect variable into matching-variables
-             finally return matching-variables)))
+;; Get the member methods for an object
+(defun koopa-powershell-get-member-methods ()
+  "Get the member methods from a PowerShell object."
+  (save-excursion
+  ;; Go to the previous line
+  (forward-line -1)
+  ;; Check for a variable assignment
+  (if (re-search-forward "\\($[a-zA-Z0-9_]+\\)\s*=\s*[^\n;]+" nil t)
+      (let* ((assignment (substring-no-properties (match-string 0)))
+	     ;; If we are on Windows, we need to change double quotes to single quotes
+	     (modified-assignment (if koopa-is-running-on-windows
+				      (replace-regexp-in-string "\"" "'" assignment)
+				    assignment))
+	     (variable (substring-no-properties (match-string 1)))
+	     ;; The command syntax differs between operating systems
+	     (cmd (if koopa-is-running-on-windows
+		      (format "%s -NoProfile -c \"%s; %s | Get-Member -ErrorAction SilentlyContinue | Select-Object -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable modified-assignment variable)
+		    (format "%s -NoProfile -c '%s; %s | Get-Member -ErrorAction SilentlyContinue | Select-Object -Property Name | Format-Table -HideTableHeaders'" koopa-powershell-executable modified-assignment variable)))
+	     ;; Join the object and its methods
+	     (methods (split-string (shell-command-to-string cmd) "\n" t))
+	     ;; Remove the whitespace from the member methods
+	     (trimmed-methods (mapcar 'string-trim methods))
+	     (member-methods (mapcar (lambda (method) (concat variable "." method "()")) trimmed-methods)))
+	(setq koopa-powershell-member-methods (append koopa-powershell-member-methods member-methods))))))
 
 ;; Get user-defined cmdlets
 (defun koopa-extract-custom-cmdlets-from-buffer ()
@@ -338,6 +386,35 @@
           (push  (substring-no-properties (match-string 1)) variables))
         (setq koopa-custom-powershell-variables variables))))
 
+;; Remove unnecessary member variables
+(defun koopa-cleanup-powershell-member-methods ()
+  "Remove deleted variables from `koopa-powershell-get-member-methods'."
+  (setq koopa-powershell-member-methods
+	(let (methods-still-in-use '())
+	  (dolist (method koopa-powershell-member-methods)
+	    ;; Extract the variable from the method
+	    (let ((variable (car (split-string method "\\."))))
+	      ;; Don't add unused or null values to the list
+	      (unless (or
+		       (not (member variable koopa-custom-powershell-variables))
+		       (eq variable nil))
+		(add-to-list 'methods-still-in-use method))))
+	  methods-still-in-use)))
+
+;; Add methods to `koopa-powershell-dotnet-methods'
+(defun koopa-update-powershell-dotnet-methods ()
+  "Update `koopa-powershell-dotnet-methods' with the current .NET type's methods."
+  ;; Extract the member from the current line
+  (save-excursion
+    (when (re-search-backward "^\\(\\[[a-zA-Z0-9\.]+\\]\\)::$" nil t)
+      (let* ((dotnet-type (substring-no-properties (match-string 1)))
+	     (cmd (format "%s -NoProfile -c \"%s.GetMethods() | Select-Object -ExpandProperty Name\"" koopa-powershell-executable dotnet-type))
+	     (methods (split-string (shell-command-to-string cmd) "\n" t))
+	     ;; Remove any whitespace from the methods
+	     (trimmed-methods (mapcar 'string-trim methods)))
+	;; Update `koopa-powershell-dotnet-methods
+	(setq koopa-powershell-dotnet-methods trimmed-methods)))))
+	     
 ;; Monitor the buffer for user-defined cmdlets and variables
 (defun koopa-monitor-code-changes ()
   "Monitor code changes and update custom cmdlets and variables lists."
@@ -352,16 +429,25 @@
   (interactive (list 'interactive))
   (cond
     ((eq command 'interactive) (company-begin-backend 'koopa-company-backend))
-    ((eq command 'prefix) (and (eq major-mode 'koopa-mode) (company-grab-symbol)))
+    ((eq command 'prefix) (and
+			   (eq major-mode 'koopa-mode)
+			   (company-grab-symbol)))
     ((eq command 'candidates)
-     (let ((completion-candidates (append
-                                   koopa-powershell-cmdlets
-                                   koopa-powershell-variables
-                                   koopa-custom-powershell-cmdlets
-                                   koopa-custom-powershell-variables)))
+     (let ((completion-candidates
+	    (cond
+	     ;; Company completions for .NET types
+	     ((looking-back "\\[[^:]*") koopa-powershell-dotnet-types)
+	     ;; Company completions for .NET type methods
+	     ((looking-back "::.*") koopa-powershell-dotnet-methods)
+	     ;; Default completions
+	     ((append
+               koopa-powershell-cmdlets
+               koopa-powershell-variables
+               koopa-custom-powershell-cmdlets
+               koopa-custom-powershell-variables
+	       koopa-powershell-member-methods)))))
        (all-completions arg completion-candidates)))
     ((eq command 'duplicates) t)))
-
 
 ;; Define a function to trigger company completion manually
 (defun koopa-trigger-company-complete ()
@@ -369,9 +455,33 @@
   (interactive)
   (company-complete))
 
+;; Create a function to update `newline-hook'
+(defun update-koopa-newline-hook ()
+  "Check if the RETURN key was pressed and a newline was inserted, and if so, trigger `koopa-newline-hook'."
+  (let ((new-line-number (line-number-at-pos))
+	(key (this-command-keys)))
+    (when (and
+	   (not (equal new-line-number koopa-current-line-number))
+	   (equal key (kbd "RET")))
+      (setq koopa-current-line-number new-line-number)
+      (run-hooks 'koopa-newline-hook))))
+
+;; Create a function to update `koopa-double-colon-hook'
+(defun update-double-colon-hook ()
+  "Check if a .NET type is being invoked"
+  (when (looking-back "::") (run-hooks 'koopa-double-colon-hook)))
+
 ;;; Hooks
 ;; Add hook to check for new user-defined cmdlets and variables
 (add-hook 'post-command-hook #'koopa-monitor-code-changes)
+;; Add hook to get member methods on save
+(add-hook 'post-command-hook #'update-koopa-newline-hook)
+(add-hook 'koopa-newline-hook #'koopa-powershell-get-member-methods)
+;; Cleanup deleted methods from `koopa-powershell-member-methods' on a newline
+(add-hook 'koopa-newline-hook #'koopa-cleanup-powershell-member-methods)
+;; Check if a .NET type is being invoked and add its methods to `koopa-powershell-dotnet-methods' 
+(add-hook 'post-command-hook #'update-double-colon-hook)
+(add-hook 'koopa-double-colon-hook #'koopa-update-powershell-dotnet-methods)
 
 (provide 'koopa-mode)
 ;;; koopa-mode.el ends here
