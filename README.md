@@ -1,6 +1,8 @@
 # koopa-mode
 An Emacs major mode for Microsoft PowerShell
 
+[![melpazoid](https://github.com/sch0lars/koopa-mode/actions/workflows/melpazoid.yml/badge.svg)](https://github.com/sch0lars/koopa-mode/actions/workflows/melpazoid.yml)
+
 ## Features
 
 * Syntax highlighting and indentation
@@ -111,6 +113,8 @@ To tell `koopa-mode` you are using *nix, use the following command:
 
 ## Known Issues
 
+- `koopa-mode` does not use a traditional backend for `company` completion. Instead, when you assign a variable, it is run through PowerShell and its methods are extracted. Therefore, **you may notice that company completion sometimes has error messages in its suggestions**.
+- Similar to the previous issue, you may also notice that a large script may briefly lag for a moment when you insert a newline. That is because of the underlying PowerShell processes that are run in the background to supply code completion features. If you just want the syntax highlighting and not the `company` completion, you can disable `company-mode`. You should not experience this issue with smaller scripts.
 - ~~On Windows, autocompletion sometimes adds whitespace at the end of the cmdlet~~
 
 ## License
