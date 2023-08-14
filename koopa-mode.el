@@ -63,7 +63,7 @@
   (local-set-key (kbd "C-<return>") 'koopa-newline-and-indent)
   (local-set-key (kbd "<backtab>") 'koopa-dedent-line)
   (local-set-key (kbd "C-c TAB") 'koopa-auto-indent)
-  (local-set-key (kbd "C-c m") 'koopa-company-backend)
+  (local-set-key (kbd "C-x m") 'koopa-company-backend)
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
   (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell)
@@ -72,7 +72,25 @@
   (add-hook 'koopa-mode-hook
             (lambda ()
               (company-mode t)
-              (setq-local company-backends '(koopa-company-backend)))))
+              (setq-local company-backends '(koopa-company-backend))))
+
+  ;;; Hooks
+  ;; Create a hook for newlines
+  (setq-local koopa-newline-hook nil
+    "A hook to check if the RETURN key was pressed and a newline was inserted.")
+  ;; Create a hook for double colons
+  (setq-local koopa-static-member-hook nil
+    "A hook to check when a .NET type is being invoked.")
+  ;; Add hook to check for new user-defined cmdlets and variables
+  (add-hook 'post-command-hook #'koopa-monitor-code-changes)
+  ;; Add hook to get member methods on save
+  (add-hook 'post-command-hook #'koopa-update-newline-hook)
+  (add-hook 'koopa-newline-hook #'koopa-powershell-get-member-methods)
+  ;; Cleanup deleted methods from `koopa-powershell-member-methods' on a newline
+  (add-hook 'koopa-newline-hook #'koopa-cleanup-powershell-member-methods)
+  ;; Check if a .NET type is being invoked and add its methods to `koopa-powershell-dotnet-methods'
+  (add-hook 'post-command-hook #'koopa-update-static-member-hook)
+  (add-hook 'koopa-static-member-hook #'koopa-update-powershell-dotnet-methods))
 
 ;; Define the syntax table
 (defconst koopa-mode-syntax-table
@@ -218,14 +236,6 @@
 (defvar koopa-current-line-number (line-number-at-pos)
   "The current line number in `koopa-mode'.")
 
-;; Create a hook for newlines
-(defvar koopa-newline-hook nil
-  "A hook to check if the RETURN key was pressed and a newline was inserted.")
-
-;; Create a hook for double colons
-(defvar koopa-double-colon-hook nil
-  "A hook to check when a .NET type is being invoked.")
-
 ;; Manually indent a line
 (defun koopa-indent-line ()
   "Manually indent a line by `koopa-indent-offset'."
@@ -245,7 +255,7 @@
 
 ;; Automatically adjust indentation for a line
 (defun koopa-auto-indent ()
-  "Automatically indent the current line according to PowerShell indentation conventions."
+  "Automatically indent the current line."
   (interactive)
   (let ((pos (point))
         (indent-level 0))
@@ -269,7 +279,7 @@
          ((looking-at ".*\\({\\|(\\|\\[\\)$")
 	  (setq indent-level (1+ indent-level)))
 	 ;; If there are no opening or closing characters, do nothing
-	 nil)))
+	 (nil))))
       ;; If the indent level is negative, set it to 0
       (if (< indent-level 0)
 	  (setq indent-level 0))
@@ -417,7 +427,7 @@
 	     
 ;; Monitor the buffer for user-defined cmdlets and variables
 (defun koopa-monitor-code-changes ()
-  "Monitor code changes and update custom cmdlets and variables lists."
+  "Monitor code and update custom cmdlets and variables lists."
   (when (and (eq major-mode 'koopa-mode)
              (buffer-modified-p))
     (koopa-extract-custom-cmdlets-from-buffer)
@@ -425,7 +435,31 @@
 
 ;; Create the company backend
 (defun koopa-company-backend (command &optional arg &rest _ignored)
-  "Company backend for PowerShell cmdlet and variable completion in koopa-mode."
+    "Company completion backend for `koopa-mode'.
+
+This function provides `company-mode' completions for `koopa-mode'
+by implementingvarious COMMANDs.  COMMAND specifies the
+action to be performed by the backend.
+
+COMMAND options:
+- 'interactive': Activate the `koopa-company-backend' as the active backend.
+- 'prefix': Generate a prefix for company completions based on the current
+  point in the buffer and the major mode.
+- 'candidates': Return a list of completion CANDIDATES based on the current
+  buffer context.
+- 'duplicates': Indicates whether the backend supports handling duplicate
+  candidates.
+
+The backend offers different types of completions:
+- For .NET types in square brackets (e.g., '[System.String]'), suggests
+  relevant .NET types.
+- For .NET type methods (e.g., '[System.String]::Substring'), suggests
+  appropriate method completions.
+- Default completions include PowerShell cmdlets, variables, and custom
+  cmdlets and variables.
+
+COMMAND, ARG, and _IGNORED are arguments passed by `company-mode' and should
+not be provided manually."
   (interactive (list 'interactive))
   (cond
     ((eq command 'interactive) (company-begin-backend 'koopa-company-backend))
@@ -436,9 +470,9 @@
      (let ((completion-candidates
 	    (cond
 	     ;; Company completions for .NET types
-	     ((looking-back "\\[[^:]*") koopa-powershell-dotnet-types)
+	     ((looking-back "\\[[^:]*" (line-beginning-position)) koopa-powershell-dotnet-types)
 	     ;; Company completions for .NET type methods
-	     ((looking-back "::.*") koopa-powershell-dotnet-methods)
+	     ((looking-back "::.*" (line-beginning-position)) koopa-powershell-dotnet-methods)
 	     ;; Default completions
 	     ((append
                koopa-powershell-cmdlets
@@ -456,8 +490,8 @@
   (company-complete))
 
 ;; Create a function to update `newline-hook'
-(defun update-koopa-newline-hook ()
-  "Check if the RETURN key was pressed and a newline was inserted, and if so, trigger `koopa-newline-hook'."
+(defun koopa-update-newline-hook ()
+  "Check if a newline was inserted."
   (let ((new-line-number (line-number-at-pos))
 	(key (this-command-keys)))
     (when (and
@@ -466,22 +500,11 @@
       (setq koopa-current-line-number new-line-number)
       (run-hooks 'koopa-newline-hook))))
 
-;; Create a function to update `koopa-double-colon-hook'
-(defun update-double-colon-hook ()
-  "Check if a .NET type is being invoked"
-  (when (looking-back "::") (run-hooks 'koopa-double-colon-hook)))
+;; Create a function to update `koopa-static-member-hook'
+(defun koopa-update-static-member-hook ()
+  "Check if a .NET type is being invoked."
+  (when (looking-back "::" (line-beginning-position)) (run-hooks 'koopa-static-member-hook)))
 
-;;; Hooks
-;; Add hook to check for new user-defined cmdlets and variables
-(add-hook 'post-command-hook #'koopa-monitor-code-changes)
-;; Add hook to get member methods on save
-(add-hook 'post-command-hook #'update-koopa-newline-hook)
-(add-hook 'koopa-newline-hook #'koopa-powershell-get-member-methods)
-;; Cleanup deleted methods from `koopa-powershell-member-methods' on a newline
-(add-hook 'koopa-newline-hook #'koopa-cleanup-powershell-member-methods)
-;; Check if a .NET type is being invoked and add its methods to `koopa-powershell-dotnet-methods' 
-(add-hook 'post-command-hook #'update-double-colon-hook)
-(add-hook 'koopa-double-colon-hook #'koopa-update-powershell-dotnet-methods)
 
 (provide 'koopa-mode)
 ;;; koopa-mode.el ends here

@@ -4,8 +4,8 @@ An Emacs major mode for Microsoft PowerShell
 ## Features
 
 * Syntax highlighting and indentation
-* The ability to spawn – and send code to – a PowerShell process in a new buffer
-* Autocompletion for both built-in and user-defined cmdlets and variables
+* The ability to spawn – and send code to – a PowerShell process in a separate buffer
+* Autocompletion for both built-in and user-defined cmdlets and variables, .NET types, and .NET type methods
 
 ## Prerequisites
 
@@ -100,7 +100,7 @@ To tell `koopa-mode` you are using *nix, use the following command:
 | `koopa-dedent-line`               | `<backtab>`  | Dedents the line by `koopa-indent-offset`                           |
 | `koopa-auto-indent`               | `C-c <tab>`  | Automatically indents the line to the appropriate indentation level |
 | `koopa-newline-and-indent`        | `C-<return>` | Indents to the appropriate indentation level and inserts a newline  |
-| `koopa-company-backend`           | `C-c m`      | Triggers the company backend                                        |
+| `koopa-company-backend`           | `C-x m`      | Triggers the company backend                                        |
 | `koopa-run-powershell`            | `C-c C-p`    | Spawns a PowerShell process in a new buffer                         |
 | `koopa-send-line-to-powershell`   | `C-c C-c`    | Send the current line to the PowerShell process                     |
 | `koopa-send-buffer-to-powershell` | `C-c C-b`    | Send the entire buffer to the PowerShell process                    |
