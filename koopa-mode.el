@@ -2,7 +2,7 @@
 
 ;; Author: Tyler Hooks
 ;; URL: https://github.com/sch0lars/koopa-mode
-;; Version: 1.2.1
+;; Version: 1.2.2
 ;; Compatibility: GNU Emacs 27.x
 ;; Keywords: powershell, convenience
 ;; Package-Requires: ((company "0.9.13") (emacs "27.1"))
@@ -75,12 +75,6 @@
               (setq-local company-backends '(koopa-company-backend))))
 
   ;;; Hooks
-  ;; Create a hook for newlines
-  (setq-local koopa-newline-hook nil
-    "A hook to check if the RETURN key was pressed and a newline was inserted.")
-  ;; Create a hook for double colons
-  (setq-local koopa-static-member-hook nil
-    "A hook to check when a .NET type is being invoked.")
   ;; Add hook to check for new user-defined cmdlets and variables
   (add-hook 'post-command-hook #'koopa-monitor-code-changes)
   ;; Add hook to get member methods on save
@@ -233,8 +227,15 @@
   :group 'koopa)
 
 ;; Define the current line in `koopa-mode'
-(defvar koopa-current-line-number (line-number-at-pos)
+(defvar-local koopa-current-line-number (line-number-at-pos)
   "The current line number in `koopa-mode'.")
+
+;; Create a hook for newlines
+  (defvar-local koopa-newline-hook nil
+    "A hook to check if the RETURN key was pressed and a newline was inserted.")
+  ;; Create a hook for double colons
+  (defvar-local koopa-static-member-hook nil
+    "A hook to check when a .NET type is being invoked.")
 
 ;; Manually indent a line
 (defun koopa-indent-line ()
