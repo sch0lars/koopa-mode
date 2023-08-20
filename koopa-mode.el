@@ -28,6 +28,9 @@
 ;;
 ;; This file provides `koopa-mode', a major mode for Microsoft PowerShell
 ;;
+;; The name is derived from the Paper Mario series, a spin-off of the
+;; Super Mario franchise, in which the Koopas have the move "Power Shell".
+;;
 ;; Usage:
 ;;
 ;;     To manually install `koopa-mode', add the following to your init.el:
@@ -45,6 +48,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'comint)
 (require 'company)
 
 ;; Define `koopa-mode'
@@ -175,7 +179,7 @@
   (let* ((cmd (format "%s -NoProfile -c \"Get-Command -CommandType Cmdlet | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
 	 (cmdlets (split-string (shell-command-to-string cmd) "\n" t)))
     ;; Remove any whitespace from the cmdlets
-    (mapcar 'string-trim cmdlets))
+    (mapcar #'string-trim cmdlets))
   "All of the built-in cmdlets for PowerShell."
   :type 'list
   :group 'koopa)
@@ -185,7 +189,7 @@
   (let* ((cmd (format "%s -NoProfile -c \"Get-Variable | Select -Property Name | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
        (variables (split-string (shell-command-to-string cmd) "\n" t))
        (prefixed-variables (mapcar (lambda (var) (concat "$" var)) variables)))
-   (mapcar 'string-trim prefixed-variables))
+   (mapcar #'string-trim prefixed-variables))
   "All of the built-in variables for PowerShell."
   :type 'list
   :group 'koopa)
@@ -207,7 +211,7 @@
   (let* ((cmd (format "%s -NoProfile -c \"Get-TypeData | Select-Object -Property TypeName | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
          (dotnet-types (split-string (shell-command-to-string cmd) "\n" t))
          ;; Remove any whitespace from the dotnet types
-         (trimmed-dotnet-types (mapcar 'string-trim dotnet-types))
+         (trimmed-dotnet-types (mapcar #'string-trim dotnet-types))
          (bracketed-dotnet-types (mapcar (lambda (dotnet-type) (concat dotnet-type "]")) trimmed-dotnet-types)))
     bracketed-dotnet-types)
   "All of the built-in .NET types for PowerShell."
@@ -315,7 +319,7 @@
     (unless (get-buffer-process buffer)
       (with-current-buffer buffer
 	(erase-buffer)
-	(apply 'start-process "PowerShell" buffer powershell-program koopa-powershell-cli-arguments)
+	(apply #'start-process "PowerShell" buffer powershell-program koopa-powershell-cli-arguments)
         (koopa-mode)
 	(comint-mode)))
     ;; If there is a valid buffer, open it
@@ -373,7 +377,7 @@
 	     ;; Join the object and its methods
 	     (methods (split-string (shell-command-to-string cmd) "\n" t))
 	     ;; Remove the whitespace from the member methods
-	     (trimmed-methods (mapcar 'string-trim methods))
+	     (trimmed-methods (mapcar #'string-trim methods))
 	     (member-methods (mapcar (lambda (method) (concat variable "." method "()")) trimmed-methods)))
 	(setq koopa-powershell-member-methods (append koopa-powershell-member-methods member-methods))))))
 
@@ -408,7 +412,7 @@
 	      ;; Don't add unused or null values to the list
 	      (unless (or
 		       (not (member variable koopa-custom-powershell-variables))
-		       (eq variable nil))
+		       (not variable))
 		(add-to-list 'methods-still-in-use method))))
 	  methods-still-in-use)))
 
@@ -422,7 +426,7 @@
 	     (cmd (format "%s -NoProfile -c \"%s.GetMethods() | Select-Object -ExpandProperty Name\"" koopa-powershell-executable dotnet-type))
 	     (methods (split-string (shell-command-to-string cmd) "\n" t))
 	     ;; Remove any whitespace from the methods
-	     (trimmed-methods (mapcar 'string-trim methods)))
+	     (trimmed-methods (mapcar #'string-trim methods)))
 	;; Update `koopa-powershell-dotnet-methods
 	(setq koopa-powershell-dotnet-methods trimmed-methods)))))
 	     
