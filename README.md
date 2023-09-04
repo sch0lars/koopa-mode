@@ -2,6 +2,8 @@
 An Emacs major mode for Microsoft PowerShell
 
 [![melpazoid](https://github.com/sch0lars/koopa-mode/actions/workflows/melpazoid.yml/badge.svg)](https://github.com/sch0lars/koopa-mode/actions/workflows/melpazoid.yml)
+[![GNU Emacs](https://img.shields.io/static/v1?logo=gnuemacs&logoColor=fafafa&label=Made%20for&message=GNU%20Emacs&color=7F5AB6&style=flat)](https://www.gnu.org/software/emacs/)
+[![MELPA](https://melpa.org/packages/koopa-mode-badge.svg)](https://melpa.org/#/koopa-mode)
 
 ## Features
 
@@ -102,7 +104,7 @@ To tell `koopa-mode` you are using *nix, use the following command:
 | `koopa-dedent-line`               | `<backtab>`  | Dedents the line by `koopa-indent-offset`                           |
 | `koopa-auto-indent`               | `C-c <tab>`  | Automatically indents the line to the appropriate indentation level |
 | `koopa-newline-and-indent`        | `C-<return>` | Indents to the appropriate indentation level and inserts a newline  |
-| `koopa-company-backend`           | `C-x m`      | Triggers the company backend                                        |
+| `koopa-company-backend`           | `C-x <tab>`  | Triggers the company backend                                        |
 | `koopa-run-powershell`            | `C-c C-p`    | Spawns a PowerShell process in a new buffer                         |
 | `koopa-send-line-to-powershell`   | `C-c C-c`    | Send the current line to the PowerShell process                     |
 | `koopa-send-buffer-to-powershell` | `C-c C-b`    | Send the entire buffer to the PowerShell process                    |
@@ -115,7 +117,7 @@ To tell `koopa-mode` you are using *nix, use the following command:
 
 - `koopa-mode` does not use a traditional backend for `company` completion. Instead, when you assign a variable, it is run through PowerShell and its methods are extracted. Therefore, **you may notice that company completion sometimes has error messages in its suggestions**.
 - Similar to the previous issue, you may also notice that a large script may briefly lag for a moment when you insert a newline. That is because of the underlying PowerShell processes that are run in the background to supply code completion features. If you just want the syntax highlighting and not the `company` completion, you can disable `company-mode`. You should not experience this issue with smaller scripts.
-- ~~On Windows, autocompletion sometimes adds whitespace at the end of the cmdlet~~
+- ~~On Windows, autocompletion sometimes adds whitespace at the end of the cmdlet.~~
 
 ## License
 

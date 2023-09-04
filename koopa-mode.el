@@ -2,7 +2,7 @@
 
 ;; Author: Tyler Hooks
 ;; URL: https://github.com/sch0lars/koopa-mode
-;; Version: 1.2.2
+;; Version: 1.3.0
 ;; Compatibility: GNU Emacs 27.x
 ;; Keywords: powershell, convenience
 ;; Package-Requires: ((company "0.9.13") (emacs "27.1"))
@@ -55,9 +55,10 @@
 (define-derived-mode koopa-mode prog-mode "koopa-mode"
   "A major mode for editing Microsoft PowerShell scripts."
   ;; Set the syntax table
-  (setq-local syntax-table koopa-mode-syntax-table)
+  (set-syntax-table koopa-mode-syntax-table)
   ;; Set the font-lock keywords
-  (setq-local font-lock-defaults '(koopa-mode-font-lock-keywords))
+  (set (make-local-variable 'font-lock-defaults)
+       '(koopa-mode-font-lock-keywords))
   ;; Make font-lock keywords case-insensitive
   (set (make-local-variable 'font-lock-defaults)
        '(koopa-mode-font-lock-keywords nil t))
@@ -67,7 +68,7 @@
   (local-set-key (kbd "C-<return>") 'koopa-newline-and-indent)
   (local-set-key (kbd "<backtab>") 'koopa-dedent-line)
   (local-set-key (kbd "C-c TAB") 'koopa-auto-indent)
-  (local-set-key (kbd "C-x m") 'koopa-company-backend)
+  (local-set-key (kbd "C-x TAB") 'koopa-company-backend)
   (local-set-key (kbd "C-c C-p") 'koopa-run-powershell)
   (local-set-key (kbd "C-c C-c") 'koopa-send-line-to-powershell)
   (local-set-key (kbd "C-c C-b") 'koopa-send-buffer-to-powershell)
@@ -81,14 +82,16 @@
   ;;; Hooks
   ;; Add hook to check for new user-defined cmdlets and variables
   (add-hook 'post-command-hook #'koopa-monitor-code-changes)
+  ;; Add hook to get cmdlet parameters
+  (add-hook 'post-command-hook #'koopa-update-powershell-cmdlet-parameters)
   ;; Add hook to get member methods on save
   (add-hook 'post-command-hook #'koopa-update-newline-hook)
   (add-hook 'koopa-newline-hook #'koopa-powershell-get-member-methods)
   ;; Cleanup deleted methods from `koopa-powershell-member-methods' on a newline
   (add-hook 'koopa-newline-hook #'koopa-cleanup-powershell-member-methods)
-  ;; Check if a .NET type is being invoked and add its methods to `koopa-powershell-dotnet-methods'
+  ;; Check if a .NET type is being invoked and add its methods to `koopa-powershell-dotnet-members'
   (add-hook 'post-command-hook #'koopa-update-static-member-hook)
-  (add-hook 'koopa-static-member-hook #'koopa-update-powershell-dotnet-methods))
+  (add-hook 'koopa-static-member-hook #'koopa-update-powershell-dotnet-members))
 
 ;; Define the syntax table
 (defconst koopa-mode-syntax-table
@@ -115,7 +118,7 @@
     (modify-syntax-entry ?\{ "(}" st)
 
     st)
-  "Syntax table for `koopa-mode'.")
+  "The syntax table for `koopa-mode'.")
 
 ;; Define the font-lock keywords
 (defconst koopa-mode-font-lock-keywords
@@ -206,6 +209,19 @@
   :type 'list
   :group 'koopa)
 
+;; Define the PowerShell cmdlet parameters
+(defcustom koopa-powershell-cmdlet-parameters '()
+  "All of the parameters for a PowerShell cmdlet."
+  :type 'list
+  :group 'koopa)
+
+;; Define the current cmdlet parameter
+(defcustom koopa-current-powershell-cmdlet nil
+  "The current PowerShell cmdlet.
+This is used to prevent repeatedly checking the same cmdlet."
+  :type 'string
+  :group 'koopa)
+
 ;; Define the built-in .NET types
 (defcustom koopa-powershell-dotnet-types
   (let* ((cmd (format "%s -NoProfile -c \"Get-TypeData | Select-Object -Property TypeName | Format-Table -HideTableHeaders\"" koopa-powershell-executable))
@@ -218,17 +234,29 @@
   :type 'list
   :group 'koopa)
 
+;; Define .NET members
+(defcustom koopa-powershell-dotnet-members '()
+  "Members for the current .NET type."
+  :type 'list
+  :group 'koopa)
+
 ;; Define member methods
 (defcustom koopa-powershell-member-methods '()
   "Member methods for PowerShell objects."
   :type 'list
   :group 'koopa)
 
-;; Define .NET methods
-(defcustom koopa-powershell-dotnet-methods '()
-  "Methods for .NET types."
-  :type 'list
-  :group 'koopa)
+;; Define the regex for cmdlet parameters
+(defvar-local koopa-powershell-cmdlet-parameter-regex "\\([a-zA-Z]+-[a-zA-Z]+.*\\)\\(-[a-zA-Z]*[^\s]\\)"
+  "The regular expression for PowerShell cmdlet parameters.")
+
+;; Define the regex for .NET types
+(defvar-local koopa-dotnet-type-regex "\\[[^:]*"
+  "The regular expression for .NET types.")
+
+;; Define the regex for .NET members
+(defvar-local koopa-dotnet-member-regex "::.*"
+  "The regular expression for .NET members.")
 
 ;; Define the current line in `koopa-mode'
 (defvar-local koopa-current-line-number (line-number-at-pos)
@@ -403,7 +431,7 @@
 
 ;; Remove unnecessary member variables
 (defun koopa-cleanup-powershell-member-methods ()
-  "Remove deleted variables from `koopa-powershell-get-member-methods'."
+  "Remove deleted variables from `koopa-powershell-member-methods'."
   (setq koopa-powershell-member-methods
 	(let (methods-still-in-use '())
 	  (dolist (method koopa-powershell-member-methods)
@@ -416,19 +444,41 @@
 		(add-to-list 'methods-still-in-use method))))
 	  methods-still-in-use)))
 
-;; Add methods to `koopa-powershell-dotnet-methods'
-(defun koopa-update-powershell-dotnet-methods ()
-  "Update `koopa-powershell-dotnet-methods' with the current .NET type's methods."
+;; Add cmdlet parameters to `koopa-powershell-cmdlet-parameters'
+(defun koopa-update-powershell-cmdlet-parameters ()
+  "Update `koopa-powershell-cmdlet-parameters'."
+  (save-excursion
+    (let ((last-cmdlet nil))
+      (if (re-search-backward "\\b[a-zA-Z]+-[a-zA-Z]+\\s-" nil t)
+	  (setq last-cmdlet (substring-no-properties (match-string 0))))
+      ;; Check that the cmdlet is not null or the same value as `koopa-current-powershell-cmdlet'
+      ;; This prevents the PowerShell command from constantly being run in the background
+      (unless (or
+	       (not (equal major-mode 'koopa-mode))
+	       (null last-cmdlet)
+	       (string-equal koopa-current-powershell-cmdlet last-cmdlet))
+	;; Update `koopa-current-powershell-cmdlet'
+	(setq koopa-current-powershell-cmdlet last-cmdlet)
+	(let* ((cmd (format "%s -NoProfile -c \"(Get-Command %s).Parameters | Select-Object -ExpandProperty Keys\"" koopa-powershell-executable last-cmdlet))
+	       (params (split-string (shell-command-to-string cmd) "\n" t))
+	       ;; Remove any whitespace from the parameters
+	       (trimmed-params (mapcar #'string-trim params))
+	       (hyphenated-params (mapcar (lambda (param) (concat "-" param)) trimmed-params)))
+	  (setq koopa-powershell-cmdlet-parameters hyphenated-params))))))
+
+;; Add methods to `koopa-powershell-dotnet-members'
+(defun koopa-update-powershell-dotnet-members ()
+  "Update `koopa-powershell-dotnet-members' with the current .NET type's members."
   ;; Extract the member from the current line
   (save-excursion
     (when (re-search-backward "^\\(\\[[a-zA-Z0-9\.]+\\]\\)::$" nil t)
       (let* ((dotnet-type (substring-no-properties (match-string 1)))
-	     (cmd (format "%s -NoProfile -c \"%s.GetMethods() | Select-Object -ExpandProperty Name\"" koopa-powershell-executable dotnet-type))
-	     (methods (split-string (shell-command-to-string cmd) "\n" t))
-	     ;; Remove any whitespace from the methods
-	     (trimmed-methods (mapcar #'string-trim methods)))
-	;; Update `koopa-powershell-dotnet-methods
-	(setq koopa-powershell-dotnet-methods trimmed-methods)))))
+	     (cmd (format "%s -NoProfile -c \"%s.GetMembers() | Select-Object -ExpandProperty Name\"" koopa-powershell-executable dotnet-type))
+	     (members (split-string (shell-command-to-string cmd) "\n" t))
+	     ;; Remove any whitespace from the members
+	     (trimmed-members (mapcar #'string-trim members)))
+	;; Update `koopa-powershell-dotnet-members
+	(setq koopa-powershell-dotnet-members trimmed-members)))))
 	     
 ;; Monitor the buffer for user-defined cmdlets and variables
 (defun koopa-monitor-code-changes ()
@@ -442,7 +492,7 @@
 (defun koopa-company-backend (command &optional arg &rest _ignored)
     "Company completion backend for `koopa-mode'.
 
-This function provides `company-mode' completions for `koopa-mode'
+This function provides company completions for `koopa-mode'
 by implementingvarious COMMANDs.  COMMAND specifies the
 action to be performed by the backend.
 
@@ -463,8 +513,8 @@ The backend offers different types of completions:
 - Default completions include PowerShell cmdlets, variables, and custom
   cmdlets and variables.
 
-COMMAND, ARG, and _IGNORED are arguments passed by `company-mode' and should
-not be provided manually."
+COMMAND, ARG, and _IGNORED are arguments passed by function `company-mode' and
+should not be provided manually."
   (interactive (list 'interactive))
   (cond
     ((eq command 'interactive) (company-begin-backend 'koopa-company-backend))
@@ -474,10 +524,15 @@ not be provided manually."
     ((eq command 'candidates)
      (let ((completion-candidates
 	    (cond
+	     ;; Company completions for cmdlet parameters
+	     ((looking-back koopa-powershell-cmdlet-parameter-regex (line-beginning-position))
+	      koopa-powershell-cmdlet-parameters)
 	     ;; Company completions for .NET types
-	     ((looking-back "\\[[^:]*" (line-beginning-position)) koopa-powershell-dotnet-types)
-	     ;; Company completions for .NET type methods
-	     ((looking-back "::.*" (line-beginning-position)) koopa-powershell-dotnet-methods)
+	     ((looking-back koopa-dotnet-type-regex (line-beginning-position))
+	      koopa-powershell-dotnet-types)
+	     ;; Company completions for .NET type members
+	     ((looking-back koopa-dotnet-member-regex (line-beginning-position))
+	      koopa-powershell-dotnet-members)
 	     ;; Default completions
 	     ((append
                koopa-powershell-cmdlets
