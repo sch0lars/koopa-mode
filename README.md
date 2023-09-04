@@ -29,6 +29,10 @@ To install `koopa-mode` using [MELPA](https://melpa.org/#/getting-started), use 
 
 `M-x package-install RET koopa-mode RET`
 
+Then, add the follwing to your `init.el`:
+
+`(require 'koopa-mode)`
+
 ### Manual
 
 To install `koopa-mode` manually, first clone the repo.
