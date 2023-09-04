@@ -21,14 +21,17 @@ An Emacs major mode for Microsoft PowerShell
 M-x package-install RET company RET
 ```
 
-
 ## Installation
+
+### MELPA
+
+To install `koopa-mode` using [MELPA](https://melpa.org/#/getting-started), use the following command:
+
+`M-x package-install RET koopa-mode RET`
 
 ### Manual
 
-Currently, `koopa-mode` has to be manually installed.
-
-To install, first clone the repo.
+To install `koopa-mode` manually, first clone the repo.
 
 ```bash
 git clone https://github.com/sch0lars/koopa-mode.git
