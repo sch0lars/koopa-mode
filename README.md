@@ -25,11 +25,11 @@ M-x package-install RET company RET
 
 ### MELPA
 
-To install `koopa-mode` using [MELPA](https://melpa.org/#/getting-started), use the following command:
+To install `koopa-mode` via [MELPA](https://melpa.org/#/getting-started), use the following command:
 
 `M-x package-install RET koopa-mode RET`
 
-Then, add the follwing to your `init.el`:
+Then, add the following to your `init.el`:
 
 `(require 'koopa-mode)`
 
